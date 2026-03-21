@@ -20,6 +20,35 @@ def _load_feishu_credentials():
     return feishu["appId"], feishu["appSecret"]
 
 
+def _text_to_blocks(text: str) -> list:
+    """将纯文本转换为飞书 docx 内容块列表。
+    ## 开头的行 → heading2 块；# 开头的行 → heading1 块；其他非空行 → paragraph 块。
+    """
+    blocks = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("## "):
+            content = stripped[3:].strip()
+            blocks.append({
+                "block_type": 4,
+                "heading2": {"elements": [{"text_run": {"content": content}}]}
+            })
+        elif stripped.startswith("# "):
+            content = stripped[2:].strip()
+            blocks.append({
+                "block_type": 3,
+                "heading1": {"elements": [{"text_run": {"content": content}}]}
+            })
+        else:
+            blocks.append({
+                "block_type": 2,
+                "paragraph": {"elements": [{"text_run": {"content": stripped}}]}
+            })
+    return blocks
+
+
 class FeishuClient:
     def __init__(self):
         self._token: Optional[str] = None
@@ -185,17 +214,20 @@ class FeishuClient:
         # 2. 写入内容块（每批最多 50 块，避免超限）
         blocks = _text_to_blocks(text)
         batch_size = 50
+        inserted = 0
         for i in range(0, len(blocks), batch_size):
             batch = blocks[i:i + batch_size]
             resp = requests.post(
                 f"https://open.feishu.cn/open-apis/docx/v1/documents/{doc_id}/blocks/{doc_id}/children",
-                json={"children": batch, "index": i},
+                json={"children": batch, "index": inserted},
                 headers=self._headers(), timeout=15
             )
             resp.raise_for_status()
             r = resp.json()
             if r.get("code") != 0:
                 logger.warning(f"写入文档块失败（批次 {i}）: {r}")
+            else:
+                inserted += len(batch)
 
         # 3. 设置组织内链接可读
         try:
@@ -212,32 +244,3 @@ class FeishuClient:
         doc_url = f"{base_url}/docx/{doc_id}"
         logger.info(f"飞书文档 URL: {doc_url}")
         return doc_url
-
-
-def _text_to_blocks(text: str) -> list:
-    """将纯文本转换为飞书 docx 内容块列表。
-    ## 开头的行 → heading2 块；# 开头的行 → heading1 块；其他非空行 → paragraph 块。
-    """
-    blocks = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith("## "):
-            content = stripped[3:].strip()
-            blocks.append({
-                "block_type": 4,
-                "heading2": {"elements": [{"text_run": {"content": content}}]}
-            })
-        elif stripped.startswith("# "):
-            content = stripped[2:].strip()
-            blocks.append({
-                "block_type": 3,
-                "heading1": {"elements": [{"text_run": {"content": content}}]}
-            })
-        else:
-            blocks.append({
-                "block_type": 2,
-                "paragraph": {"elements": [{"text_run": {"content": stripped}}]}
-            })
-    return blocks
