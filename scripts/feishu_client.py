@@ -158,3 +158,86 @@ class FeishuClient:
         except Exception as e:
             logger.error(f"更新多维表格失败 {record_id}: {e}")
         return False
+
+    def create_feishu_doc(self, title: str, text: str, base_url: str) -> str:
+        """在飞书创建一篇 docx 文档，写入分析报告内容，设置组织内链接可读，返回文档 URL。
+
+        Args:
+            title: 文档标题，例如 "000977 浪潮信息 2026-03-22 分析报告"
+            text: 报告正文（纯文本，支持 ## 标题）
+            base_url: 飞书租户域名，例如 "https://my.feishu.cn"
+        Returns:
+            文档 URL，例如 "https://my.feishu.cn/docx/doxcnXXX"
+        """
+        # 1. 创建文档
+        resp = requests.post(
+            "https://open.feishu.cn/open-apis/docx/v1/documents",
+            json={"title": title},
+            headers=self._headers(), timeout=15
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        if result.get("code") != 0:
+            raise RuntimeError(f"创建飞书文档失败: {result}")
+        doc_id = result["data"]["document"]["document_id"]
+        logger.info(f"飞书文档创建成功: {doc_id}")
+
+        # 2. 写入内容块（每批最多 50 块，避免超限）
+        blocks = _text_to_blocks(text)
+        batch_size = 50
+        for i in range(0, len(blocks), batch_size):
+            batch = blocks[i:i + batch_size]
+            resp = requests.post(
+                f"https://open.feishu.cn/open-apis/docx/v1/documents/{doc_id}/blocks/{doc_id}/children",
+                json={"children": batch, "index": i},
+                headers=self._headers(), timeout=15
+            )
+            resp.raise_for_status()
+            r = resp.json()
+            if r.get("code") != 0:
+                logger.warning(f"写入文档块失败（批次 {i}）: {r}")
+
+        # 3. 设置组织内链接可读
+        try:
+            resp = requests.patch(
+                f"https://open.feishu.cn/open-apis/drive/v1/permissions/{doc_id}/public",
+                params={"type": "docx"},
+                json={"link_share_entity": "tenant_readable"},
+                headers=self._headers(), timeout=10
+            )
+            resp.raise_for_status()
+        except Exception as e:
+            logger.warning(f"设置文档权限失败（不影响文档创建）: {e}")
+
+        doc_url = f"{base_url}/docx/{doc_id}"
+        logger.info(f"飞书文档 URL: {doc_url}")
+        return doc_url
+
+
+def _text_to_blocks(text: str) -> list:
+    """将纯文本转换为飞书 docx 内容块列表。
+    ## 开头的行 → heading2 块；# 开头的行 → heading1 块；其他非空行 → paragraph 块。
+    """
+    blocks = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("## "):
+            content = stripped[3:].strip()
+            blocks.append({
+                "block_type": 4,
+                "heading2": {"elements": [{"text_run": {"content": content}}]}
+            })
+        elif stripped.startswith("# "):
+            content = stripped[2:].strip()
+            blocks.append({
+                "block_type": 3,
+                "heading1": {"elements": [{"text_run": {"content": content}}]}
+            })
+        else:
+            blocks.append({
+                "block_type": 2,
+                "paragraph": {"elements": [{"text_run": {"content": stripped}}]}
+            })
+    return blocks
