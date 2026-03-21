@@ -117,7 +117,15 @@ def run_analysis(force: bool = False):
             # 去重检查
             existing = feishu.query_bitable_records(bitable_token, table_id, today, code)
             if existing:
-                logger.info(f"{code} 今日已有记录，跳过写入")
+                # 若「完整报告」为空则补写
+                record_id = existing[0].get("record_id")
+                existing_fields = existing[0].get("fields", {})
+                if record_id and not existing_fields.get("完整报告") and raw_text:
+                    feishu.update_bitable_record(bitable_token, table_id, record_id,
+                                                 {"完整报告": raw_text, "文本": f"{code} {name}".strip()})
+                    logger.info(f"{code} 今日已有记录，已补写完整报告")
+                else:
+                    logger.info(f"{code} 今日已有记录，跳过写入")
             else:
                 # 写入多维表格
                 fields = {
@@ -128,6 +136,7 @@ def run_analysis(force: bool = False):
                     "市场": market,
                     "决策": action,
                     "分析摘要": reasoning,
+                    "完整报告": raw_text,  # Risk Manager 完整分析报告
                 }
                 if target is not None:
                     fields["目标价"] = float(target)

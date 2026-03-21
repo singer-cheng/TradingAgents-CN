@@ -140,3 +140,21 @@ class FeishuClient:
                 time.sleep(wait)
         logger.error(f"写入多维表格最终失败: {fields.get('股票代码', '')}")
         return False
+
+    def update_bitable_record(self, bitable_token: str, table_id: str,
+                               record_id: str, fields: dict) -> bool:
+        """更新多维表格中已有记录的指定字段"""
+        url = (f"https://open.feishu.cn/open-apis/bitable/v1/apps/{bitable_token}"
+               f"/tables/{table_id}/records/{record_id}")
+        try:
+            resp = requests.put(url, json={"fields": fields},
+                                headers=self._headers(), timeout=15)
+            resp.raise_for_status()
+            result = resp.json()
+            if result.get("code") == 0:
+                logger.info(f"更新多维表格成功: {record_id}")
+                return True
+            logger.warning(f"更新失败响应: {result}")
+        except Exception as e:
+            logger.error(f"更新多维表格失败 {record_id}: {e}")
+        return False
