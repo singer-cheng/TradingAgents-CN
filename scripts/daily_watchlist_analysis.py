@@ -79,8 +79,10 @@ def run_analysis(force: bool = False):
     # 从 bitable_url 提取租户域名（例如 https://my.feishu.cn）
     _parts = bitable_url.split("/base/", 1)
     if len(_parts) < 2:
-        logger.warning(f"bitable_url 格式异常，无法提取租户域名: {bitable_url}")
-    base_url = _parts[0]
+        logger.warning(f"bitable_url 格式异常，无法提取租户域名: {bitable_url}，文档创建将跳过")
+        base_url = ""
+    else:
+        base_url = _parts[0]
 
     # 2. 读取自选股列表
     from scripts.feishu_client import FeishuClient
