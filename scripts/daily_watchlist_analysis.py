@@ -121,6 +121,7 @@ def run_analysis(force: bool = False):
             else:
                 # 写入多维表格
                 fields = {
+                    "文本": f"{code} {name}".strip(),  # 主字段（记录标题）
                     "日期": int(datetime.strptime(today, "%Y-%m-%d").timestamp() * 1000),
                     "股票代码": code,
                     "股票名称": name,
