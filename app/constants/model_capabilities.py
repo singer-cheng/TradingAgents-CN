@@ -125,6 +125,14 @@ DEFAULT_MODEL_CAPABILITIES: Dict[str, Dict[str, Any]] = {
         "performance_metrics": {"speed": 2, "cost": 1, "quality": 5},
         "description": "通义千问长文本版，超长上下文"
     },
+    "qwen3.5-plus": {
+        "capability_level": 3,
+        "suitable_roles": [ModelRole.BOTH],
+        "features": [ModelFeature.TOOL_CALLING, ModelFeature.LONG_CONTEXT, ModelFeature.REASONING],
+        "recommended_depths": ["快速", "基础", "标准", "深度"],
+        "performance_metrics": {"speed": 4, "cost": 3, "quality": 4},
+        "description": "通义千问3.5增强版（百炼Coding Plan），均衡性能与成本"
+    },
     
     # ==================== OpenAI ====================
     "gpt-3.5-turbo": {

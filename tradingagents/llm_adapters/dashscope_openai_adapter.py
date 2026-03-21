@@ -69,10 +69,10 @@ class ChatDashScopeOpenAI(ChatOpenAI):
         else:
             logger.info(f"✅ [DashScope初始化] 使用 kwargs 中传入的 API Key（来自数据库配置）")
 
-        # 设置 DashScope OpenAI 兼容接口的默认配置
-        kwargs.setdefault("base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+        # 设置 DashScope OpenAI 兼容接口的默认配置（优先读取环境变量）
+        kwargs.setdefault("base_url", os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"))
         kwargs["api_key"] = api_key_from_kwargs  # 🔥 使用验证后的 API Key
-        kwargs.setdefault("model", "qwen-turbo")
+        kwargs.setdefault("model", os.getenv("DASHSCOPE_MODEL", "qwen-turbo"))
         kwargs.setdefault("temperature", 0.1)
         kwargs.setdefault("max_tokens", 2000)
 
