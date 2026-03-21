@@ -27,14 +27,23 @@ def main():
     bitable_token = config["bitable_token"]
     table_id = config["table_id"]
 
-    # 检查「报告链接」字段是否已存在
-    resp = requests.get(
-        f"https://open.feishu.cn/open-apis/bitable/v1/apps/{bitable_token}/tables/{table_id}/fields",
-        headers=client._headers(), timeout=10
-    )
-    resp.raise_for_status()
-    fields = resp.json().get("data", {}).get("items", [])
-    existing_names = [f["field_name"] for f in fields]
+    # 检查「报告链接」字段是否已存在（分页查询，避免漏检）
+    existing_names = []
+    page_token = None
+    while True:
+        params = {"page_size": 100}
+        if page_token:
+            params["page_token"] = page_token
+        resp = requests.get(
+            f"https://open.feishu.cn/open-apis/bitable/v1/apps/{bitable_token}/tables/{table_id}/fields",
+            headers=client._headers(), params=params, timeout=10
+        )
+        resp.raise_for_status()
+        data = resp.json().get("data", {})
+        existing_names.extend(f["field_name"] for f in data.get("items", []))
+        if not data.get("has_more"):
+            break
+        page_token = data.get("page_token")
     logger.info(f"现有字段: {existing_names}")
 
     if "报告链接" in existing_names:
@@ -53,6 +62,7 @@ def main():
         logger.info("✅ 「报告链接」字段创建成功")
     else:
         logger.error(f"创建字段失败: {result}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
