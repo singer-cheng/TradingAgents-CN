@@ -52,3 +52,10 @@ def test_create_feishu_doc_converts_headings():
     assert blocks[1]["block_type"] == 2   # paragraph
     assert blocks[2]["block_type"] == 4   # heading2
     assert blocks[3]["block_type"] == 2   # paragraph
+
+def test_text_to_blocks_heading1():
+    """# 开头的行应被识别为 heading1 块（block_type=3）"""
+    from scripts.feishu_client import _text_to_blocks
+    blocks_h1 = _text_to_blocks("# 大标题\n正文")
+    assert blocks_h1[0]["block_type"] == 3   # heading1
+    assert blocks_h1[1]["block_type"] == 2   # paragraph
