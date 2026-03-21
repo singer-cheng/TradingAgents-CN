@@ -57,12 +57,12 @@ def extract_price(text: str, pattern: str) -> Optional[float]:
     return None
 
 
-def run_analysis():
+def run_analysis(force: bool = False):
     today = datetime.now().strftime("%Y-%m-%d")
     logger.info(f"===== TradingAgents 每日分析启动：{today} =====")
 
-    # 0. 交易日检查
-    if not is_trading_day(today):
+    # 0. 交易日检查（--force 可跳过，用于手动测试）
+    if not force and not is_trading_day(today):
         logger.info(f"{today} 非交易日，退出")
         return
 
@@ -90,6 +90,7 @@ def run_analysis():
     from tradingagents.graph.trading_graph import TradingAgentsGraph
     from tradingagents.default_config import DEFAULT_CONFIG
     ta_config = DEFAULT_CONFIG.copy()
+    ta_config["llm_provider"] = "dashscope"
     ta_config["backend_url"] = os.getenv("DASHSCOPE_BASE_URL",
                                           "https://dashscope.aliyuncs.com/compatible-mode/v1")
     ta_config["deep_think_llm"] = os.getenv("DASHSCOPE_MODEL", "qwen-plus-latest")
@@ -170,4 +171,8 @@ def run_analysis():
 
 
 if __name__ == "__main__":
-    run_analysis()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true", help="跳过交易日检查（手动测试用）")
+    args = parser.parse_args()
+    run_analysis(force=args.force)

@@ -41,7 +41,7 @@ def main():
     result = resp.json()
     if result.get("code") != 0:
         raise RuntimeError(f"创建电子表格失败: {result}")
-    spreadsheet_token = result["data"]["spreadsheet"]["spreadsheetToken"]
+    spreadsheet_token = result["data"]["spreadsheet"]["spreadsheet_token"]
     spreadsheet_url = result["data"]["spreadsheet"]["url"]
     logger.info(f"电子表格创建成功: {spreadsheet_url}")
 

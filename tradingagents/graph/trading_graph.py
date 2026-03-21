@@ -937,7 +937,8 @@ class TradingAgentsGraph:
                         final_state = init_agent_state.copy()
                     for node_name, node_update in chunk.items():
                         if not node_name.startswith('__'):
-                            final_state.update(node_update)
+                            if isinstance(node_update, dict):
+                                final_state.update(node_update)
                 else:
                     # values 模式：chunk = {"messages": [...], ...}
                     if len(chunk.get("messages", [])) > 0:
@@ -979,7 +980,8 @@ class TradingAgentsGraph:
                         final_state = init_agent_state.copy()
                     for node_name, node_update in chunk.items():
                         if not node_name.startswith('__'):
-                            final_state.update(node_update)
+                            if isinstance(node_update, dict):
+                                final_state.update(node_update)
             else:
                 # 原有的invoke模式（也需要计时）
                 logger.info("⏱️ 使用 invoke 模式执行分析（无进度回调）")
@@ -1001,12 +1003,8 @@ class TradingAgentsGraph:
                             current_node_start = time.time()
                             break
 
-                    # 累积状态更新
-                    if final_state is None:
-                        final_state = init_agent_state.copy()
-                    for node_name, node_update in chunk.items():
-                        if not node_name.startswith('__'):
-                            final_state.update(node_update)
+                    # values 模式：chunk 是完整 state，直接覆盖
+                    final_state = chunk
 
         # 记录最后一个节点的时间
         if current_node_name and current_node_start:
@@ -1037,7 +1035,10 @@ class TradingAgentsGraph:
         self.curr_state = final_state
 
         # Log state
-        self._log_state(trade_date, final_state)
+        try:
+            self._log_state(trade_date, final_state)
+        except Exception as log_err:
+            logger.warning(f"_log_state 记录失败（不影响结果）: {log_err}")
 
         # 获取模型信息
         model_info = ""
