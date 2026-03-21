@@ -76,6 +76,8 @@ def run_analysis(force: bool = False):
     bitable_token = config["bitable_token"]
     bitable_url = config["bitable_url"]
     table_id = config["table_id"]
+    # 从 bitable_url 提取租户域名（例如 https://my.feishu.cn）
+    base_url = bitable_url.split("/base/")[0]
 
     # 2. 读取自选股列表
     from scripts.feishu_client import FeishuClient
@@ -114,30 +116,39 @@ def run_analysis(force: bool = False):
             target_3m = extract_price(raw_text, r"3[个月].*?(\d+\.?\d*)[元¥]")
             stop_loss = extract_price(raw_text, r"止损.*?(\d+\.?\d*)[元¥]")
 
+            # 创建飞书文档（失败不影响主流程）
+            doc_url = None
+            if raw_text:
+                try:
+                    doc_title = f"{code} {name} {today} 分析报告".strip()
+                    doc_url = feishu.create_feishu_doc(doc_title, raw_text, base_url)
+                except Exception as doc_err:
+                    logger.warning(f"创建飞书文档失败（不影响写入）: {doc_err}")
+
             # 去重检查
             existing = feishu.query_bitable_records(bitable_token, table_id, today, code)
             if existing:
-                # 若「完整报告」为空则补写
                 record_id = existing[0].get("record_id")
                 existing_fields = existing[0].get("fields", {})
-                if record_id and not existing_fields.get("完整报告") and raw_text:
+                if record_id and not existing_fields.get("报告链接") and doc_url:
                     feishu.update_bitable_record(bitable_token, table_id, record_id,
-                                                 {"完整报告": raw_text, "文本": f"{code} {name}".strip()})
-                    logger.info(f"{code} 今日已有记录，已补写完整报告")
+                                                 {"报告链接": {"link": doc_url, "text": "查看完整报告"},
+                                                  "文本": f"{code} {name}".strip()})
+                    logger.info(f"{code} 今日已有记录，已补写报告链接")
                 else:
                     logger.info(f"{code} 今日已有记录，跳过写入")
             else:
-                # 写入多维表格
                 fields = {
-                    "文本": f"{code} {name}".strip(),  # 主字段（记录标题）
+                    "文本": f"{code} {name}".strip(),
                     "日期": int(datetime.strptime(today, "%Y-%m-%d").timestamp() * 1000),
                     "股票代码": code,
                     "股票名称": name,
                     "市场": market,
                     "决策": action,
                     "分析摘要": reasoning,
-                    "完整报告": raw_text,  # Risk Manager 完整分析报告
                 }
+                if doc_url:
+                    fields["报告链接"] = {"link": doc_url, "text": "查看完整报告"}
                 if target is not None:
                     fields["目标价"] = float(target)
                 if target_1m is not None:
