@@ -117,9 +117,9 @@ def run_analysis(force: bool = False):
             reasoning = (decision.get("reasoning") or "")[:300]
 
             raw_text = final_state.get("final_trade_decision", "")
-            target_1m = extract_price(raw_text, r"1[个月].*?(\d+\.?\d*)[元¥]")
-            target_3m = extract_price(raw_text, r"3[个月].*?(\d+\.?\d*)[元¥]")
-            stop_loss = extract_price(raw_text, r"止损.*?(\d+\.?\d*)[元¥]")
+            target_1m = extract_price(raw_text, r"1[个月][^¥元\d]{0,20}(\d+\.?\d*)\s*[元¥]?")
+            target_3m = extract_price(raw_text, r"3[个月][^¥元\d]{0,20}(\d+\.?\d*)\s*[元¥]?")
+            stop_loss = extract_price(raw_text, r"止损[^¥元\d]{0,10}(\d+\.?\d*)\s*[元¥]?")
 
             # 创建飞书文档（失败不影响主流程）
             doc_url = None
