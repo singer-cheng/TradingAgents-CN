@@ -138,13 +138,13 @@ def run_analysis(force: bool = False):
                 if record_id and not existing_fields.get("报告链接") and doc_url:
                     feishu.update_bitable_record(bitable_token, table_id, record_id,
                                                  {"报告链接": {"link": doc_url, "text": "查看完整报告"},
-                                                  "文本": f"{code} {name}".strip()})
+                                                  "文本": f"{code} {name} {doc_url}".strip()})
                     logger.info(f"{code} 今日已有记录，已补写报告链接")
                 else:
                     logger.info(f"{code} 今日已有记录，跳过写入")
             else:
                 fields = {
-                    "文本": f"{code} {name}".strip(),
+                    "文本": f"{code} {name} {doc_url}".strip() if doc_url else f"{code} {name}".strip(),
                     "日期": int(datetime.strptime(today, "%Y-%m-%d").timestamp() * 1000),
                     "股票代码": code,
                     "股票名称": name,
