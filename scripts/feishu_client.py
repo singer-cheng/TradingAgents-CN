@@ -211,14 +211,25 @@ class FeishuClient:
         doc_id = result["data"]["document"]["document_id"]
         logger.info(f"飞书文档创建成功: {doc_id}")
 
-        # 2. 写入内容块（每批最多 50 块，避免超限）
+        # 2. 获取根页面块 ID（page block 的 block_id 不一定等于 doc_id）
+        resp = requests.get(
+            f"https://open.feishu.cn/open-apis/docx/v1/documents/{doc_id}/blocks",
+            params={"page_size": 1},
+            headers=self._headers(), timeout=10
+        )
+        resp.raise_for_status()
+        items = resp.json().get("data", {}).get("items", [])
+        page_block_id = items[0]["block_id"] if items else doc_id
+        logger.info(f"根页面块 ID: {page_block_id}")
+
+        # 3. 写入内容块（每批最多 50 块，避免超限）
         blocks = _text_to_blocks(text)
         batch_size = 50
         inserted = 0
         for i in range(0, len(blocks), batch_size):
             batch = blocks[i:i + batch_size]
             resp = requests.post(
-                f"https://open.feishu.cn/open-apis/docx/v1/documents/{doc_id}/blocks/{doc_id}/children",
+                f"https://open.feishu.cn/open-apis/docx/v1/documents/{doc_id}/blocks/{page_block_id}/children",
                 json={"children": batch, "index": inserted},
                 headers=self._headers(), timeout=15
             )

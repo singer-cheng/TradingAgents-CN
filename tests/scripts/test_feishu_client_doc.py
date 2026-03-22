@@ -28,7 +28,12 @@ def test_create_feishu_doc_returns_url():
     client._webhook_url = ""
 
     base_url = "https://my.feishu.cn"
+    get_mock = MagicMock()
+    get_mock.raise_for_status = MagicMock()
+    get_mock.json.return_value = {"data": {"items": [{"block_id": "pageBlockABC"}]}}
+
     with patch("requests.post") as mock_post, \
+         patch("requests.get", return_value=get_mock), \
          patch("requests.patch") as mock_patch:
 
         mock_post.side_effect = _mock_post([
