@@ -135,16 +135,16 @@ def run_analysis(force: bool = False):
             if existing:
                 record_id = existing[0].get("record_id")
                 existing_fields = existing[0].get("fields", {})
-                if record_id and not existing_fields.get("报告链接") and doc_url:
+                if record_id and not existing_fields.get("分析报告") and doc_url:
                     feishu.update_bitable_record(bitable_token, table_id, record_id,
-                                                 {"报告链接": {"link": doc_url, "text": "查看完整报告"},
-                                                  "文本": f"{code} {name} {doc_url}".strip()})
-                    logger.info(f"{code} 今日已有记录，已补写报告链接")
+                                                 {"分析报告": {"link": doc_url, "text": code},
+                                                  "文本": name})
+                    logger.info(f"{code} 今日已有记录，已补写分析报告链接")
                 else:
                     logger.info(f"{code} 今日已有记录，跳过写入")
             else:
                 fields = {
-                    "文本": f"{code} {name} {doc_url}".strip() if doc_url else f"{code} {name}".strip(),
+                    "文本": name,
                     "日期": int(datetime.strptime(today, "%Y-%m-%d").timestamp() * 1000),
                     "股票代码": code,
                     "股票名称": name,
@@ -153,7 +153,7 @@ def run_analysis(force: bool = False):
                     "分析摘要": reasoning,
                 }
                 if doc_url:
-                    fields["报告链接"] = {"link": doc_url, "text": "查看完整报告"}
+                    fields["分析报告"] = {"link": doc_url, "text": code}
                 if target is not None:
                     fields["目标价"] = float(target)
                 if target_1m is not None:
