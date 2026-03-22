@@ -44,7 +44,7 @@ def _text_to_blocks(text: str) -> list:
         else:
             blocks.append({
                 "block_type": 2,
-                "paragraph": {"elements": [{"text_run": {"content": stripped}}]}
+                "text": {"elements": [{"text_run": {"content": stripped}}]}
             })
     return blocks
 
