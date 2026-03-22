@@ -146,7 +146,6 @@ def run_analysis(force: bool = False):
                 fields = {
                     "文本": name,
                     "日期": int(datetime.strptime(today, "%Y-%m-%d").timestamp() * 1000),
-                    "股票代码": code,
                     "股票名称": name,
                     "市场": market,
                     "决策": action,
