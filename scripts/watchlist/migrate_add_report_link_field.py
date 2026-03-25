@@ -12,14 +12,14 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config", "watchlist_config.json")
 
 
 def main():
-    from scripts.feishu_client import FeishuClient
+    from scripts.watchlist.feishu_client import FeishuClient
     client = FeishuClient()
 
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:

@@ -12,15 +12,15 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from dotenv import load_dotenv
 load_dotenv()
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                             "config", "watchlist_config.json")
 
 def main():
-    from scripts.feishu_client import FeishuClient
+    from scripts.watchlist.feishu_client import FeishuClient
     client = FeishuClient()
 
     # 检查 config 是否已存在

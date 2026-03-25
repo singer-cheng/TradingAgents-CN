@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 @pytest.fixture(autouse=True)
 def mock_credentials(monkeypatch):
     monkeypatch.setenv("HOME", "/tmp")
-    with patch("scripts.feishu_client._load_feishu_credentials", return_value=("id", "secret")):
+    with patch("scripts.watchlist.feishu_client._load_feishu_credentials", return_value=("id", "secret")):
         yield
 
 def _mock_post(responses: list):
@@ -19,7 +19,7 @@ def _mock_post(responses: list):
     return side_effects
 
 def test_create_feishu_doc_returns_url():
-    from scripts.feishu_client import FeishuClient
+    from scripts.watchlist.feishu_client import FeishuClient
     client = FeishuClient.__new__(FeishuClient)
     client._token = "tok"
     client._token_fetched_at = 9999999999  # 防止自动刷新 token（会多发一次 POST）
@@ -51,7 +51,7 @@ def test_create_feishu_doc_returns_url():
 
 def test_create_feishu_doc_converts_headings():
     """## 开头的行应被识别为标题块，其余为段落块"""
-    from scripts.feishu_client import _text_to_blocks
+    from scripts.watchlist.feishu_client import _text_to_blocks
     blocks = _text_to_blocks("## 一、市场分析\n正文内容\n\n## 二、风险\n风险内容")
     assert blocks[0]["block_type"] == 4   # heading2
     assert blocks[1]["block_type"] == 2   # paragraph
@@ -60,7 +60,49 @@ def test_create_feishu_doc_converts_headings():
 
 def test_text_to_blocks_heading1():
     """# 开头的行应被识别为 heading1 块（block_type=3）"""
-    from scripts.feishu_client import _text_to_blocks
+    from scripts.watchlist.feishu_client import _text_to_blocks
     blocks_h1 = _text_to_blocks("# 大标题\n正文")
     assert blocks_h1[0]["block_type"] == 3   # heading1
     assert blocks_h1[1]["block_type"] == 2   # paragraph
+
+def test_text_to_blocks_heading3():
+    """### 开头的行应被识别为 heading3 块（block_type=5）"""
+    from scripts.watchlist.feishu_client import _text_to_blocks
+    blocks = _text_to_blocks("### 小标题\n正文")
+    assert blocks[0]["block_type"] == 5   # heading3
+    assert blocks[1]["block_type"] == 2   # paragraph
+
+def test_text_to_blocks_bullet():
+    """* 或 - 开头的行应被识别为无序列表块（block_type=12）"""
+    from scripts.watchlist.feishu_client import _text_to_blocks
+    blocks = _text_to_blocks("* 第一项\n- 第二项\n正文")
+    assert blocks[0]["block_type"] == 12  # bullet
+    assert blocks[0]["bullet"]["elements"][0]["text_run"]["content"] == "第一项"
+    assert blocks[1]["block_type"] == 12  # bullet
+    assert blocks[2]["block_type"] == 2   # paragraph
+
+def test_text_to_blocks_divider():
+    """--- 行应被识别为分割线块（block_type=22）"""
+    from scripts.watchlist.feishu_client import _text_to_blocks
+    blocks = _text_to_blocks("前言\n---\n后续")
+    assert blocks[0]["block_type"] == 2   # paragraph
+    assert blocks[1]["block_type"] == 22  # divider
+    assert blocks[2]["block_type"] == 2   # paragraph
+
+def test_parse_inline_bold():
+    """**text** 应生成 bold=True 的 text_run"""
+    from scripts.watchlist.feishu_client import _parse_inline
+    elements = _parse_inline("普通 **加粗** 普通")
+    assert len(elements) == 3
+    assert elements[0]["text_run"]["content"] == "普通 "
+    assert elements[1]["text_run"]["content"] == "加粗"
+    assert elements[1]["text_run"]["text_element_style"]["bold"] is True
+    assert elements[2]["text_run"]["content"] == " 普通"
+
+def test_text_to_blocks_inline_bold_in_bullet():
+    """列表项中的 **bold** 应正确解析"""
+    from scripts.watchlist.feishu_client import _text_to_blocks
+    blocks = _text_to_blocks("* **激进分析师**：买入")
+    assert blocks[0]["block_type"] == 12
+    elements = blocks[0]["bullet"]["elements"]
+    assert any(e["text_run"].get("text_element_style", {}).get("bold") for e in elements)

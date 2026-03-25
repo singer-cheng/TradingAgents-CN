@@ -20,32 +20,45 @@ def _load_feishu_credentials():
     return feishu["appId"], feishu["appSecret"]
 
 
+def _parse_inline(text: str) -> list:
+    """解析行内 **bold** 格式，返回 text_run elements 列表。"""
+    elements = []
+    parts = re.split(r'\*\*(.+?)\*\*', text)
+    for i, part in enumerate(parts):
+        if not part:
+            continue
+        if i % 2 == 1:
+            elements.append({"text_run": {"content": part, "text_element_style": {"bold": True}}})
+        else:
+            elements.append({"text_run": {"content": part}})
+    return elements if elements else [{"text_run": {"content": text}}]
+
+
 def _text_to_blocks(text: str) -> list:
-    """将纯文本转换为飞书 docx 内容块列表。
-    ## 开头的行 → heading2 块；# 开头的行 → heading1 块；其他非空行 → paragraph 块。
+    """将 markdown 文本转换为飞书 docx 内容块列表。
+    支持 #/##/### 标题、* /- 无序列表、--- 分割线、**bold** 行内加粗。
     """
     blocks = []
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped:
             continue
-        if stripped.startswith("## "):
+        if stripped in ("---", "***", "___"):
+            blocks.append({"block_type": 22, "divider": {}})
+        elif stripped.startswith("### "):
+            content = stripped[4:].strip()
+            blocks.append({"block_type": 5, "heading3": {"elements": _parse_inline(content)}})
+        elif stripped.startswith("## "):
             content = stripped[3:].strip()
-            blocks.append({
-                "block_type": 4,
-                "heading2": {"elements": [{"text_run": {"content": content}}]}
-            })
+            blocks.append({"block_type": 4, "heading2": {"elements": _parse_inline(content)}})
         elif stripped.startswith("# "):
             content = stripped[2:].strip()
-            blocks.append({
-                "block_type": 3,
-                "heading1": {"elements": [{"text_run": {"content": content}}]}
-            })
+            blocks.append({"block_type": 3, "heading1": {"elements": _parse_inline(content)}})
+        elif stripped.startswith("* ") or stripped.startswith("- "):
+            content = stripped[2:].strip()
+            blocks.append({"block_type": 12, "bullet": {"elements": _parse_inline(content)}})
         else:
-            blocks.append({
-                "block_type": 2,
-                "text": {"elements": [{"text_run": {"content": stripped}}]}
-            })
+            blocks.append({"block_type": 2, "text": {"elements": _parse_inline(stripped)}})
     return blocks
 
 

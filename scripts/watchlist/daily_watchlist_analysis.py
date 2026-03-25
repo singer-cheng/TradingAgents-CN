@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Optional
 
 # 项目根目录加入 Python 路径
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, PROJECT_ROOT)
 
 from dotenv import load_dotenv
@@ -85,7 +85,7 @@ def run_analysis(force: bool = False):
         base_url = _parts[0]
 
     # 2. 读取自选股列表
-    from scripts.feishu_client import FeishuClient
+    from scripts.watchlist.feishu_client import FeishuClient
     feishu = FeishuClient()
     watchlist = feishu.get_watchlist(spreadsheet_token)
     if not watchlist:
@@ -96,12 +96,16 @@ def run_analysis(force: bool = False):
     # 3. 初始化 TradingAgents
     from tradingagents.graph.trading_graph import TradingAgentsGraph
     from tradingagents.default_config import DEFAULT_CONFIG
+    aigocode_api_key = os.environ.get("AIGOCODE_API_KEY")
+    llm_model = os.environ.get("AIGOCODE_MODEL", "gpt-5.4")
+    if not aigocode_api_key:
+        raise EnvironmentError("缺少必要环境变量: AIGOCODE_API_KEY")
     ta_config = DEFAULT_CONFIG.copy()
-    ta_config["llm_provider"] = "dashscope"
-    ta_config["backend_url"] = os.getenv("DASHSCOPE_BASE_URL",
-                                          "https://dashscope.aliyuncs.com/compatible-mode/v1")
-    ta_config["deep_think_llm"] = os.getenv("DASHSCOPE_MODEL", "qwen-plus-latest")
-    ta_config["quick_think_llm"] = os.getenv("DASHSCOPE_MODEL", "qwen-plus-latest")
+    ta_config["llm_provider"] = "openai"
+    ta_config["backend_url"] = "https://api.aigocode.com"
+    ta_config["openai_api_key"] = aigocode_api_key
+    ta_config["deep_think_llm"] = llm_model
+    ta_config["quick_think_llm"] = llm_model
     ta = TradingAgentsGraph(config=ta_config)
 
     # 4. 逐股分析
